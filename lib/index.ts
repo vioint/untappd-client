@@ -1,372 +1,601 @@
-// 'use strict'
-// let qs = require('querystring');
-// let request = require('request');
-// let util = require('util');
+'use strict';
+const request = require('request');
+const util = require('util');
 
-// const apiVer = 'v4';
-// const baseApiUrl = 'https://api.untappd.com';
+const apiVer = 'v4';
+const baseApiUrl = 'https://api.untappd.com';
+const baseAuthUrl = 'https://untappd.com/oauth/';
 
-// class UntappdClient {
-// 	constructor(clientId, clientSecret, clientToken, debug = false) {
-// 		this.debug = debug;
-// 		this.token = clientToken;
-// 		this.secret = clientSecret;
-// 		this.id = clientId;
-// 		this.req2 = function (reqMethod, path, params, data, callback) {
-// 			var reqUrl = `${baseApiUrl}/${apiVer}/${path}`;
-// 			var oauthInfo = this.token ?
-// 				{ access_token: this.token } :
-// 				{ client_id: this.id, client_secret: this.secret };
-// 			var resHandler = function (err, res, body) {
-// 				if (callback) {
-// 					callback(err, body);
-// 				}
-// 				else {
-// 					if (err) {
-// 						if (debug) {
-// 							console.error(err);
-// 						}
-// 						else {
-// 							throw err;
-// 						}
-// 					}
-// 					else if (debug) {
-// 						console.log(util.inspect(arguments));
-// 					}
-// 				}
-// 			};
-// 			var reqOpts = {
-// 				method: reqMethod,
-// 				url: reqUrl,
-// 				oauth: { transport_method: 'query' },
-// 				qs: oauthInfo,
-// 				json: true
-// 			};
-// 			if (reqMethod === 'GET') {
-// 				reqOpts.qs = Object.assign(reqOpts.qs, params, data);
-// 			}
-// 			else if (reqMethod === 'POST') {
-// 				reqOpts.form = data;
-// 			}
-// 			request(reqOpts, resHandler);
-// 		};
-// 		// this.post = function (path, params, data, callback) {
-// 		// 	return this.req2("POST", path, params, data, callback);
-// 		// };
-// 		// this.get = function (path, params, callback) {
-// 		// 	return this.req2("GET", path, params, null, callback);
-// 		// };
-// 		this.setClientId = function (clientId) {
-// 			this.id = clientId;
-// 			return this;
-// 		};
-// 		this.getClientId = function () {
-// 			return this.id;
-// 		};
-// 		this.setClientSecret = function (clientSecret) {
-// 			this.secret = clientSecret;
-// 			return this;
-// 		};
-// 		this.getClientSecret = function () {
-// 			return this.secret;
-// 		};
-// 		this.setAccessToken = function (accessToken) {
-// 			this.token = accessToken;
-// 			return this;
-// 		};
-// 		this.getAccessToken = function () {
-// 			return this.token;
-// 		};
-// 		this.hasToken = function () {
-// 			return !!this.token;
-// 		};
-// 		this.hasId = function () {
-// 			return !!this.id;
-// 		};
-// 		this.hasSecret = function () {
-// 			return !!this.secret;
-// 		};
-// 	}
-// 	// OAUTH Stuff
-// 	// We use the basic oauth redirect method from untappd.
-// 	// this url can be used in the browser to get the access token
-// 	getUserAuthenticationURL(returnRedirectionURL) {
-// 		this.validateRequest(returnRedirectionURL, "returnRedirectionURL");
-// 		if (!this.hasId())
-// 			throw new Error("UntappdClient.getUserAuthenticationURL requires a ClientId");
-// 		return "https://untappd.com/oauth/authenticate/?client_id=" + this.id + "&response_type=token&redirect_url=" + returnRedirectionURL;
-// 	}
-// 	//this is for server-side, Step 1 - OAUTH Authentication
-// 	getAuthenticationURL(returnRedirectionURL) {
-// 		this.validateRequest(returnRedirectionURL, "returnRedirectionURL");
-// 		if (!this.hasId())
-// 			throw new Error("UntappdClient.getUserAuthenticationURL requires a ClientId");
-// 		return "https://untappd.com/oauth/authenticate/?client_id=" + this.id + "&response_type=code&redirect_url=" + returnRedirectionURL + "&code=COD";
-// 	}
-// 	// Step 2 - OATUH Authorization
-// 	getAuthorizationURL(returnRedirectionURL, code) {
-// 		this.validateRequest(returnRedirectionURL, "returnRedirectionURL");
-// 		if (!this.hasId() || !this.hasSecret())
-// 			throw new Error("UntappdClient.getUserAuthenticationURL requires a ClientId/ClientSecret pair.");
-// 		return "https://untappd.com/oauth/authorize/?client_id=" + this.id + "&client_secret=" + this.secret + "&response_type=code&redirect_url=" + returnRedirectionURL + "&code=" + code;
-// 	}
-// 	// The FEEDS
-// 	// https://untappd.com/api/docs#activityfeed
-// 	activityFeed(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.get("checkin/recent", data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#useractivityfeed
-// 	userActivityFeed(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(callback, "callback");
-// 		// username or token
-// 		if (!hasToken())
-// 			validate(data.USERNAME, "USERNAME");
-// 		this.authorized();
-// 		return this.get("user/checkins/" + (data.USERNAME || ''), data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#theppublocal
-// 	pubFeed(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("thepub/local", data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#venueactivityfeed
-// 	venueActivityFeed(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(callback, "callback");
-// 		this.validateRequest(data.VENUE_ID, "VENUE_ID");
-// 		this.authorized();
-// 		return this.get("venue/checkins/" + data.VENUE_ID, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#beeractivityfeed
-// 	beerActivityFeed(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(callback, "callback");
-// 		this.validateRequest(data.BID, "BID");
-// 		this.authorized();
-// 		return this.get("beer/checkins/" + data.BID, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#breweryactivityfeed
-// 	breweryActivityFeed(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(callback, "callback");
-// 		this.validateRequest(data.BREWERY_ID, "BREWERY_ID");
-// 		this.authorized();
-// 		return this.get("brewery/checkins/" + data.BREWERY_ID, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#notifications
-// 	notifications(callback) {
-// 		data = data || {};
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.get("notifications", null, callback);
-// 	}
-// 	// The INFO / SEARCH
-// 	// https://untappd.com/api/docs#userinfo
-// 	userInfo(callback, data) {
-// 		data = data || {};
-// 		if (!hasToken())
-// 			validate(data.USERNAME, "USERNAME");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("user/info/" + (data.USERNAME || ''), data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#userwishlist
-// 	userWishList(callback, data) {
-// 		data = data || {};
-// 		if (!hasToken())
-// 			validate(data.USERNAME, "USERNAME");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("user/wishlist/" + (data.USERNAME || ''), data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#userfriends
-// 	userFriends(callback, data) {
-// 		data = data || {};
-// 		if (!hasToken())
-// 			validate(data.USERNAME, "USERNAME");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("user/friends/" + (data.USERNAME || ''), data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#userbadges
-// 	userBadges(callback, data) {
-// 		data = data || {};
-// 		if (!hasToken())
-// 			validate(data.USERNAME, "USERNAME");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("user/badges/" + (data.USERNAME || ''), data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#userbeers
-// 	userDistinctBeers(callback, data) {
-// 		data = data || {};
-// 		if (!hasToken())
-// 			validate(data.USERNAME, "USERNAME");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("user/beers/" + (data.USERNAME || ''), data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#breweryinfo
-// 	breweryInfo(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.BREWERY_ID, "BREWERY_ID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("brewery/info/" + data.BREWERY_ID, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#beerinfo
-// 	beerInfo(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.BID, "BID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("beer/info/" + data.BID, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#beersearch
-// 	beerSearch(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.q, "q");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("search/beer", data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#brewerysearch
-// 	brewerySearch(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.q, "searchTerms");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("search/brewery", data, callback);
-// 	}
-// 	// CHECKIN calls
-// 	// https://untappd.com/api/docs#checkin
-// 	checkin(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.gmt_offset, "gmt_offset");
-// 		this.validateRequest(data.timezone, "timezone");
-// 		this.validateRequest(data.bid, "bid");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.post("/v4/checkin/add", {}, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#toast
-// 	// If already toasted, this will untoast, otherwise it toasts.
-// 	toast(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.CHECKIN_ID, "CHECKIN_ID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.get("checkin/toast" + data.CHECKIN_ID, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#pendingfriends
-// 	pendingFriends(callback) {
-// 		data = data || {};
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.get("user/pending", data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#addfriend
-// 	requestFriends(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.TARGET_ID, "TARGET_ID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.get("friend/request/" + data.TARGET_ID, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#removefriend
-// 	removeFriends(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.TARGET_ID, "TARGET_ID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.get("friend/remove/" + data.TARGET_ID, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#acceptfriend
-// 	acceptFriends(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.TARGET_ID, "TARGET_ID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.post("/v4/friend/accept/" + data.TARGET_ID, {}, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#rejectfriend
-// 	rejectFriends(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.TARGET_ID, "TARGET_ID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.post("/v4/friend/reject/" + data.TARGET_ID, {}, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#addcomment
-// 	addComment(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.CHECKIN_ID, "CHECKIN_ID");
-// 		this.validateRequest(data.shout, "shout");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.post("/v4/checkin/addcomment/" + data.CHECKIN_ID, {}, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#removecommment
-// 	removeComment(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.COMMENT_ID, "COMMENT_ID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.post("/v4/checkin/deletecomment/" + data.COMMENT_ID, {}, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#addwish
-// 	addToWishList(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.bid, "bid");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.get("user/wishlist/add", data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#removewish
-// 	removeFromWishList(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.bid, "bid");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized(true);
-// 		return this.get("user/wishlist/remove", data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#foursquarelookup
-// 	foursquareVenueLookup(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.VENUE_ID, "VENUE_ID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("venue/foursquare_lookup/" + data.VENUE_ID, data, callback);
-// 	}
-// 	// https://untappd.com/api/docs#venueinfo
-// 	venueInfo(callback, data) {
-// 		data = data || {};
-// 		this.validateRequest(data.VENUE_ID, "VENUE_ID");
-// 		this.validateRequest(callback, "callback");
-// 		this.authorized();
-// 		return this.get("venue/info/" + data.VENUE_ID, data, callback);
-// 	}
-// 	validateRequest(param, key) {
-// 		var message = key + " cannot be undefined or null.";
-// 		return (param) ? null : new Error(message);
-// 	}
-// 	authorized(tokenOnly) {
-// 		if (this.debug) {
-// 			console.log(this.getClientId(), this.getClientSecret(), this.getAccessToken());
-// 		}
-// 		tokenOnly = (tokenOnly === undefined) ? false : tokenOnly;
-// 		var caller = arguments.callee.caller.name;
-// 		if (tokenOnly && !this.hasToken())
-// 			throw new Error("UntappdClient." + caller + " requires an AccessToken.");
-// 		if (!this.hasToken() && !(this.hasId() && this.hasSecret()))
-// 			throw new Error("UntappdClient." + caller + " requires an AccessToken or a ClientId/ClientSecret pair.");
-// 	}
-// }
+enum ApiMethod {
+	GET,
+	POST
+}
 
-// module.exports = UntappdClient;
+module UntappdAPI {
+  export class UntappdClient {
+    clientId: String;
+    clientSecret: String;
+    token: String;
+    debug: Boolean = false;
+
+    /**
+     * @param opts {
+     * 	@param clientId The API client ID
+     * 	@param clientSecret The API client secret
+     * 	@param clientToken An API user token
+     * 	@param debug Either true or false to enable debug messages
+     * }
+     */
+    constructor(opts: any) {
+      opts = opts || {};
+      this.clientId = opts.clientId;
+      this.clientSecret = opts.clientSecret;
+      this.token = opts.clientToken;
+      this.debug = opts.debug;
+
+      if (!this.token && !(this.clientId && this.clientSecret)) {
+        throw new Error('Missing required client id and/or client secret.');
+      }
+
+    }
+
+    makeRequest = function (reqMethod: ApiMethod, path: String, params: any, callback: Function): Promise<any> {
+      return new Promise((resolve, reject) => {
+        var reqUrl = `${baseApiUrl}/${apiVer}/${path}`;
+        var oauthInfo = this.token ?
+          { access_token: this.token } :
+          { client_id: this.clientId, client_secret: this.clientSecret };
+        var resHandler = function (err: any, res: any, body: any) {
+          if (callback) {
+            callback(err, body);
+          } else {
+            if (this.debug) {
+              console.log(`A ${reqMethod} request to '${path}' with the parameters \n ${util.inspect(arguments)} returned \n ${util.inspect(body)}`);
+            }
+            if (err) {
+              if (this.debug) {
+                console.error(err);
+              }
+              else {
+                reject(err);
+              }
+            } else {
+              resolve(body);
+            }
+          }
+        };
+        var reqOpts = {
+          method: reqMethod,
+          url: reqUrl,
+          oauth: { transport_method: 'query' },
+          qs: oauthInfo,
+          json: true,
+          form: null
+        };
+        if (reqMethod === ApiMethod.GET) {
+          reqOpts.qs = Object.assign(reqOpts.qs, params);
+        } else if (reqMethod === ApiMethod.POST) {
+          reqOpts.form = params;
+        }
+        request(reqOpts, resHandler);
+      });
+    }
+    setClientId(newClientId: String) {
+      this.clientId = newClientId;
+      return this;
+    }
+    getClientId() {
+      return this.clientId;
+    }
+    setClientSecret(newClientSecret: String) {
+      this.clientSecret = newClientSecret;
+      return this;
+    }
+    getClientSecret() {
+      return this.clientSecret;
+    }
+    setAccessToken(newAccessToken: String) {
+      this.token = newAccessToken;
+      return this;
+    }
+    getAccessToken() {
+      return this.token;
+    }
+    hasToken() {
+      return !!this.token;
+    }
+    hasId() {
+      return !!this.clientId;
+    }
+    hasSecret() {
+      return !!this.clientSecret;
+    }
+    validateParam(param: any, key: string) {
+      if (param === null) {
+        throw new Error(`'${key}' is a required parameter`);
+      }
+    }
+    validateToken() {
+      if (!this.hasToken())
+        throw new Error('An access token is required but it was not specified');
+    }
+    /**
+     * Generates a url that will return an access token via client-side authentication
+     * @param {string} redirectUrl the callback url that will get the access token
+     */
+    getAuthenticationTokenUrl(redirectUrl: string) {
+      if (!this.hasId())
+        throw new Error('OAuth authentication requires a client id');
+      const authUrl = baseAuthUrl +
+        'authenticate/?client_id=' + this.clientId +
+        '&response_type=token' +
+        '&redirect_url=' + redirectUrl;
+      return authUrl;
+    }
+    /**
+     * Generates a url for server-side OAuth first phase - getting the OAuth 2.0 code
+     * @param {string} redirectUrl the callback url that will get the code
+     * @param {string} state Optional: A state object (to be returned to the server for CSRF protection)
+     */
+    getAuthenticationCodeUrl(redirectUrl: string, state: string) {
+      if (!this.hasId())
+        throw new Error('OAuth authentication requires a client id (and a client secret for phase 2)');
+      let authUrl = baseAuthUrl +
+        'authenticate/?client_id=' + this.clientId +
+        '&response_type=code' +
+        '&redirect_url=' + redirectUrl;
+      if (state) {
+        authUrl += '&state=' + state;
+      }
+      return authUrl;
+    }
+    /**
+     * Generates a url for server-side OAuth second phase - the url for acquiring the OAuth 2.0 access token
+     * @param {string} redirectUrl the callback url that will get the access token
+     * @param {string} code the code received in the initial authentication step
+     */
+    getAuthorizationUrl(redirectUrl: string, code: string) {
+      if (!(this.hasId() && this.hasSecret()))
+        throw new Error('OAuth authentication requires a client id and a client secret');
+      const authUrl = baseAuthUrl +
+        'authorize/?client_id=' + this.clientId +
+        '&client_secret=' + this.clientSecret +
+        '&response_type=code' +
+        '&redirect_url=' + redirectUrl +
+        '&code=' + code;
+      return authUrl;
+    }
+
+    /**
+     * Returns the access token for the code obtained in the initial server-side based OAuth authentication
+     * @param {string} redirectUrl the original callback url that was used to obtain the code
+     * @param {string} code the code received in the initial authentication step
+     * @param {Function} callback a callback to recieve the access token or error
+     */
+    acquireAccessToken(redirectUrl: string, code: string, callback: Function): Promise<any> {
+      return new Promise((resolve, reject) => {
+        var reqUrl = this.getAuthorizationUrl(redirectUrl, code);
+        var reqOpts = {
+          method: ApiMethod.GET,
+          url: reqUrl,
+          json: true
+        };
+        request(reqOpts, (err: any, res: any, body: any) => {
+          if (callback) {
+            callback(err, err ? body : body.response.access_token);
+          } else {
+            if (this.debug) {
+              console.log(`Authorization returned \n ${util.inspect(body)}`);
+            }
+            if (err) {
+              if (this.debug) {
+                console.error(err);
+              }
+              else {
+                reject(err);
+              }
+            } else {
+              resolve(body);
+            }
+          }
+        });
+      });
+    }
+
+    /* Feeds */
+    /**
+     * This method allows you the obtain all the friend check-in feed of the authenticated user.
+     * This includes only beer checkin-ins from Friends. By default it will return at max 25 records.
+     *
+      @param {Object}	opts where :
+      -	access_token 	(string, required)	- The access token of the authenicated user.
+      -	max_id				(int, optional) 		- The checkin ID that you want the results to start with.
+      -	min_id				(int, optional) - Returns only checkins that are newer than this value.
+      -	limit					(int, optional)			- The number of results to return, max of 50, default is 25.
+
+      @param {Function} callback The function to receive the response or the error
+
+      https://untappd.com/api/docs#activityfeed
+    */
+    activityFeed(opts: any, callback: Function): Promise<any> {
+      this.validateToken();
+      opts = Object.assign({}, opts);
+      return this.makeRequest(ApiMethod.GET, 'checkin/recent', opts, callback);
+    }
+    /**
+      USERNAME (string, optional) - The username that you wish to call the request upon. If you do not provide a username - the feed will return results from the authenticated user (if the access_token is provided).
+      max_id (int, optional) - The checkin ID that you want the results to start with.
+      min_id (int, optional) - Returns only checkins that are newer than this value.
+      limit (int, optional) - The number of results to return, max of 25, default is 25
+
+      https://untappd.com/api/docs#useractivityfeed
+    */
+    userActivityFeed(opts: { username: any; }, callback: Function): Promise<any> {
+      if (!this.hasToken())
+        this.validateParam(opts.username, 'username');
+      return this.makeRequest(ApiMethod.GET, 'user/checkins/' + (opts.username || ''), opts, callback);
+    }
+    /**
+      lat (float, required) - The latitude of the query
+      lng (float, required) - The longitude of the query
+      max_id (int, optional) - The checkin ID that you want the results to start with
+      min_id (int, optional) - Returns only checkins that are newer than this value
+      limit (int, optional) - The number of results to return, max of 25, default is 25
+      radius (int, optional) - The max radius you would like the check-ins to start within, max of 25, default is 25
+      dist_pref (string, optional) - If you want the results returned in miles or km. Available options: 'm', or 'km'. Default is 'm'
+
+      https://untappd.com/api/docs#theppublocal
+    */
+    pubFeed(latitude: Number, longitude: Number, opts: any, callback: Function): Promise<any> {
+      var reqBody = Object.assign({ lat: latitude, lng: longitude }, opts);
+      return this.makeRequest(ApiMethod.GET, 'thepub/local', reqBody, callback);
+    }
+    /**
+      VENUE_ID (int, required) - The Venue ID that you want to display checkins
+      max_id (int, optional) - The checkin ID that you want the results to start with
+      min_id (int, optional) - Returns only checkins that are newer than this value
+      limit (int, optional) - The number of results to return, max of 25, default is 25
+
+      https://untappd.com/api/docs#venueactivityfeed
+    */
+    venueActivityFeed(venueId: string, opts: any, callback: Function): Promise<any> {
+      return this.makeRequest(ApiMethod.GET, 'venue/checkins/' + venueId, opts, callback);
+    }
+    /**
+      BID (int, required) - The beer ID that you want to display checkins
+      access_token or client_id and client_secret (string, required) - Either pass the access_token for authorized calls OR the client_id and client_secret for unauthorized calls
+      max_id (int, optional) - The checkin ID that you want the results to start with
+      min_id (int, optional) - Returns only checkins that are newer than this value
+      limit (int, optional) - The number of results to return, max of 25, default is 25
+
+      https://untappd.com/api/docs#beeractivityfeed
+    */
+    beerActivityFeed(beerId: string, opts: any, callback: Function): Promise<any> {
+      return this.makeRequest(ApiMethod.GET, 'beer/checkins/' + beerId, opts, callback);
+    }
+    /**
+      BREWERY_ID (int, required) - The Brewery ID that you want to display checkins
+      max_id (int, optional) - The checkin ID that you want the results to start with
+      min_id (int, optional) - Returns only checkins that are newer than this value
+      limit (int, optional) - The number of results to return, max of 25, default is 25
+
+      https://untappd.com/api/docs#breweryactivityfeed
+    */
+    breweryActivityFeed(breweryId: string, opts: any, callback: Function): Promise<any> {
+      return this.makeRequest(ApiMethod.GET, 'brewery/checkins/' + breweryId, opts, callback);
+    }
+    /**
+      offset (int, optional) - The numeric offset that you what results to start
+      limit (int, optional) - The number of records that you will return (max 25, default 25)
+
+      https://untappd.com/api/docs#notifications
+    */
+    notifications(opts: any, callback: Function): Promise<any> {
+      this.validateToken();
+      return this.makeRequest(ApiMethod.GET, 'notifications', opts, callback);
+    }
+
+    /*** Info / Search **/
+    /**
+      USERNAME (string, optional) - The username that you wish to call the request upon. If you do not provide a username - the feed will return results from the authenticated user (if the access_token is provided)
+      compact (string, optional) - You can pass 'true' here only show the user infomation, and remove the 'checkins', 'media', 'recent_brews', etc attributes
+
+      Note: If you use a user's access token, the 'settings' attribute for the user will be
+      included in the response, otherwise you will get an empty settings block.
+
+      https://untappd.com/api/docs#userinfo
+    */
+    userInfo(opts: { username: any; }, callback: Function): Promise<any> {
+      if (!this.hasToken())
+        this.validateParam(opts.username, 'username');
+      return this.makeRequest(ApiMethod.GET, 'user/info/' + (opts.username || ''), opts, callback);
+    }
+    /**
+      USERNAME (string, optional) - The username that you wish to call the request upon. If you do not provide a username - the feed will return results from the authenticated user (if the access_token is provided)
+      offset (int, optional) - The numeric offset that you what results to start
+      limit (int, optional) - The number of results to return, max of 50, default is 25
+      sort (string, optional) - You can sort the results using these values:
+        date - sorts by date (default),
+        checkin - sorted by highest checkin,
+        highest_rated - sorts by global rating descending order,
+        lowest_rated - sorts by global rating ascending order,
+        highest_abv - highest ABV from the wishlist,
+        lowest_abv - lowest ABV from the wishlist
+
+     https://untappd.com/api/docs#userwishlist
+    */
+    userWishList(opts: { username: any; }, callback: Function): Promise<any> {
+      if (!this.hasToken())
+        this.validateParam(opts.username, 'username');
+      return this.makeRequest(ApiMethod.GET, 'user/wishlist/' + (opts.username || ''), opts, callback);
+    }
+    /**
+      USERNAME (string, optional) - The username that you wish to call the request upon. If you do not provide a username - the feed will return results from the authenticated user (if the access_token is provided)
+      access_token or client_id and client_secret (string, required) - Either pass the access_token for authorized calls OR the client_id and client_secret for unauthorized calls
+      offset (int, optional) - The numeric offset that you what results to start
+      limit (int, optional) - The number of records that you will return (max 25, default 25)
+
+     https://untappd.com/api/docs#userfriends
+    */
+    userFriends(opts: { username: any; }, callback: Function): Promise<any> {
+      if (!this.hasToken())
+        this.validateParam(opts.username, 'username');
+      return this.makeRequest(ApiMethod.GET, 'user/friends/' + (opts.username || ''), opts, callback);
+    }
+    /**
+      USERNAME (string, optional) - The username that you wish to call the request upon. If you do not provide a username - the feed will return results from the authenticated user (if the access_token is provided)
+      access_token or client_id and client_secret (string, required) - Either pass the access_token for authorized calls OR the client_id and client_secret for unauthorized calls
+      offset (int, optional) - The numeric offset that you what results to start
+      limit (int, optional) - The number of badges to return in your result set
+
+      https://untappd.com/api/docs#userbadges
+    */
+    userBadges(opts: { username: any; }, callback: Function): Promise<any> {
+      if (!this.hasToken())
+        this.validateParam(opts.username, 'username');
+      return this.makeRequest(ApiMethod.GET, 'user/badges/' + (opts.username || ''), opts, callback);
+    }
+    /**
+      USERNAME (string, optional) - The username that you wish to call the request upon. If you do not provide a username - the feed will return results from the authenticated user (if the access_token is provided)
+      access_token or client_id and client_secret (string, required) - Either pass the access_token for authorized calls OR the client_id and client_secret for unauthorized calls
+      offset (int, optional) - The numeric offset that you what results to start
+      limit (int, optional) - The number of results to return, max of 50, default is 25
+      sort (string, optional) - Your can sort the results using these values:
+        date - sorts by date (default),
+        checkin - sorted by highest checkin,
+        highest_rated - sorts by global rating descending order,
+        lowest_rated - sorts by global rating ascending order,
+        highest_rated_you - the user's highest rated beer,
+        lowest_rated_you - the user's lowest rated beer
+
+      https://untappd.com/api/docs#userbeers
+    */
+    userDistinctBeers(opts: { username: any; }, callback: Function): Promise<any> {
+      if (!this.hasToken())
+        this.validateParam(opts.username, 'username');
+      return this.makeRequest(ApiMethod.GET, 'user/beers/' + (opts.username || ''), opts, callback);
+    }
+    /**
+      BREWERY_ID (int, required) - The Brewery ID that you want to display checkins
+      access_token or client_id and client_secret (string, required) - Either pass the access_token for authorized calls OR the client_id and client_secret for unauthorized calls
+      compact (string, optional) - You can pass 'true' here only show the brewery infomation, and remove the 'checkins', 'media', 'beer_list', etc attributes
+
+      https://untappd.com/api/docs#breweryinfo
+    */
+    breweryInfo(breweryId: string, opts: any, callback: Function): Promise<any> {
+      return this.makeRequest(ApiMethod.GET, 'brewery/info/' + breweryId, opts, callback);
+    }
+    /**
+      BID (int, required) - The Beer ID that you want to display checkins
+      access_token or client_id and client_secret (string, required) - Either pass the access_token for authorized calls OR the client_id and client_secret for unauthorized calls
+      compact (string, optional) - You can pass 'true' here only show the beer infomation, and remove the 'checkins', 'media', 'variants', etc attributes
+
+      https://untappd.com/api/docs#beerinfo
+    */
+    beerInfo(beerId: string, opts: any, callback: Function): Promise<any> {
+      return this.makeRequest(ApiMethod.GET, 'beer/info/' + beerId, opts, callback);
+    }
+    /**
+      VENUE_ID (int, required) - The Venue ID that you want to display checkins
+      access_token or client_id and client_secret (string, required) - Either pass the access_token for authorized calls OR the client_id and client_secret for unauthorized calls
+      compact (string, optional) - You can pass 'true' here only show the venue infomation, and remove the 'checkins', 'media', 'top_beers', etc attributes
+
+      https://untappd.com/api/docs#venueinfo
+    */
+    venueInfo(venueId: string, opts: any, callback: Function): Promise<any> {
+      return this.makeRequest(ApiMethod.GET, 'venue/info/' + venueId, opts, callback);
+    }
+    /**
+      access_token or client_id and client_secret (string, required) - Either pass the access_token for authorized calls OR the client_id and client_secret for unauthorized calls
+      q (string, required) - The search term that you want to search.
+      offset (int, optional) - The numeric offset that you what results to start
+      limit (int, optional) - The number of results to return, max of 50, default is 25
+      sort (string, optional) - Your can sort the results using these values: checkin - sorts by checkin count (default), name - sorted by alphabetic beer name
+
+        https://untappd.com/api/docs#beersearch
+    */
+    beerSearch(q: string, opts: any, callback: Function): Promise<any> {
+      var params = Object.assign({}, { 'q': q }, opts);
+      return this.makeRequest(ApiMethod.GET, 'search/beer', params, callback);
+    }
+    /**
+      access_token or client_id and client_secret (string, required) - Either pass the access_token for authorized calls OR the client_id and client_secret for unauthorized calls
+      q (string, required) - The search term that you want to search.
+      offset (int, optional) - The numeric offset that you what results to start
+      limit (int, optional) - The number of results to return, max of 50, default is 25
+
+      https://untappd.com/api/docs#brewerysearch
+     */
+    brewerySearch(q: string, opts: any, callback: Function): Promise<any> {
+      var params = Object.assign({}, { 'q': q }, opts);
+      return this.makeRequest(ApiMethod.GET, 'search/brewery', params, callback);
+    }
+    /**
+      access_token (string, required) - The access token for the acting user
+      VENUE_ID (string, required) - The foursquare venue v2 ID that you wish to translate into a Untappd venue ID.
+
+        https://untappd.com/api/docs#foursquarelookup
+    */
+    foursquareVenueLookup(venueId: string, callback: Function): Promise<any> {
+      return this.makeRequest(ApiMethod.GET, 'venue/foursquare_lookup/' + venueId, null, callback);
+    }
+
+
+    /**
+     *
+      access_token (string, required) - The access token for the acting user
+      gmt_offset (string, required) - The numeric value of hours the user is away from the GMT (Greenwich Mean Time), such as -5.
+      timezone (string, required) - The timezone of the user, such as EST or PST./li>
+      bid (int, required) - The numeric Beer ID you want to check into.
+      foursquare_id (string, optional) - The MD5 hash ID of the Venue you want to attach the beer checkin. This HAS TO BE the MD5 non-numeric hash from the foursquare v2.
+      geolat (int, optional) - The numeric Latitude of the user. This is required if you add a location.
+      geolng (int, optional) - The numeric Longitude of the user. This is required if you add a location.
+      shout (string, optional) - The text you would like to include as a comment of the checkin. Max of 140 characters.
+      rating (int, optional) - The rating score you would like to add for the beer. This can only be 1 to 5 (half ratings are included). You can't rate a beer a 0.
+      facebook (string, optional) - If you want to push this check-in to the users' Facebook account, pass this value as 'on', default is 'off'
+      twitter (string, optional) - If you want to push this check-in to the users' Twitter account, pass this value as 'on', default is 'off'
+      foursquare (string, optional) - If you want to push this check-in to the users' Foursquare account, pass this value as 'on', default is 'off'. You must include a location for this to enabled.
+
+      https://untappd.com/api/docs#checkin
+     */
+    checkin(bid: string, timezone: string, gmt_offset: string, opts: any, callback: Function): Promise<any> {
+      this.validateToken();
+      opts = Object.assign({
+        'bid': bid,
+        'timezone': timezone,
+        'gmt_offset': gmt_offset
+      }, opts);
+
+      return this.makeRequest(ApiMethod.POST, 'checkin/add', opts, callback);
+    }
+
+    /**
+     *
+      This method will allow you to toast a checkin. Please note, if the user has already toasted this check-in, it will delete the toast.
+
+      access_token (string, required) - The access token for the acting user
+      CHECKIN_ID (int, required) - The checkin ID of checkin you want to toast
+
+      https://untappd.com/api/docs#toast
+     */
+    toast(checkinId: string, callback: Function): Promise<any> {
+      this.validateToken();
+      return this.makeRequest(ApiMethod.POST, 'checkin/toast/' + checkinId, null, callback);
+    }
+
+    /**
+      access_token (string, required) - The access token for the acting user
+      offset (int, optional) - The numeric offset that you what results to start
+      limit (int, optional) - The number of results to return. (default is all)
+
+      https://untappd.com/api/docs#pendingfriends
+     */
+    pendingFriends(opts: any, callback: Function): Promise<any> {
+      this.validateToken();
+      opts = Object.assign({}, opts);
+      return this.makeRequest(ApiMethod.GET, 'user/pending', opts, callback);
+    }
+
+    /**
+     * This will allow you to request a person to be your friend.
+
+      access_token (string, required) - The access token for the acting user
+      TARGET_ID (int, required) - The target user id that you wish to accept.
+
+        https://untappd.com/api/docs#addfriend
+     */
+    addFriend(targetId: string, callback: Function): Promise<any> {
+      this.validateToken();
+      return this.makeRequest(ApiMethod.GET, 'friend/request/' + targetId, null, callback);
+    }
+    /**
+     * This will allow you to remove a current friend
+      access_token (string, required) - The access token for the acting user
+      TARGET_ID (int, required) - The target user id that you wish to remove.
+
+        https://untappd.com/api/docs#removefriend
+     */
+    removeFriend(targetId: string, callback: Function): Promise<any> {
+      this.validateToken();
+      return this.makeRequest(ApiMethod.GET, 'friend/remove/' + targetId, null, callback);
+    }
+    /**
+     * This will allow you to accept a pending friend request
+      access_token (string, required) - The access token for the acting user
+      TARGET_ID (int, required) - The target user id that you wish to accept.
+
+        https://untappd.com/api/docs#acceptfriend
+     */
+    acceptFriend(targetId: string, callback: Function): Promise<any> {
+      this.validateToken();
+      return this.makeRequest(ApiMethod.GET, 'friend/accept/' + targetId, null, callback);
+    }
+    /**
+     *
+      access_token (string, required) - The access token for the acting user
+      TARGET_ID (int, required) - The target user id that you wish to reject.
+
+        https://untappd.com/api/docs#rejectfriend
+     */
+    rejectFriend(targetId: string, callback: Function): Promise<any> {
+      this.validateToken();
+      return this.makeRequest(ApiMethod.POST, 'friend/reject/' + targetId, null, callback);
+    }
+    /**
+     * This method will allow you comment on a checkin.
+      access_token (string, required) - The access token for the acting user
+      CHECKIN_ID (int, required) - The checkin ID of the check-in you want ot add the comment.
+      comment (string, required) - The text of the comment you want to add. Max of 140 characters.
+
+        https://untappd.com/api/docs#addcomment
+     */
+    addComment(checkinId: string, comment: string, callback: Function): Promise<any> {
+      this.validateToken();
+      const opts = Object.assign({
+        'comment': comment
+      });
+      return this.makeRequest(ApiMethod.POST, 'checkin/addcomment/' + checkinId, opts, callback);
+    }
+    /**
+     * This method will allow you to delete your comment on a checkin.
+      access_token (string, required) - The access token for the acting user
+      COMMENT_ID (int, required) - The comment ID of comment you want to delete
+
+        https://untappd.com/api/docs#removecommment
+     */
+    removeComment(commentId: string, callback: Function): Promise<any> {
+      this.validateToken();
+      return this.makeRequest(ApiMethod.POST, 'checkin/deletecomment/' + commentId, null, callback);
+    }
+    /**
+     * This method will allow you to add a beer to your wish list.
+      access_token (string, required) - The access token for the acting user
+      bid (int, required) - The numeric BID of the beer you want to add your list.
+
+        https://untappd.com/api/docs#addwish
+     */
+    addToWishList(beerId: string, callback: Function): Promise<any> {
+      this.validateToken();
+      const opts = {
+        bid: beerId
+      };
+      return this.makeRequest(ApiMethod.GET, 'user/wishlist/add', opts, callback);
+    }
+    /**
+     * This method will allow you to remove a beer from your wish list.
+      access_token (string, required) - The access token for the acting user
+      bid (int, required) - The numeric BID of the beer you want to remove from your list.
+
+      https://untappd.com/api/docs#removewish
+     */
+    removeFromWishList(beerId: string, callback: Function): Promise<any> {
+      this.validateToken();
+      const opts = {
+        bid: beerId
+      };
+      return this.makeRequest(ApiMethod.GET, 'user/wishlist/remove', opts, callback);
+    }
+  }
+
+}
+export = UntappdAPI;
